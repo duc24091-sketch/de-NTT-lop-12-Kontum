@@ -264,12 +264,26 @@
             const container = document.getElementById('quiz-container');
             container.innerHTML = renderPart1() + renderPart2() + renderPart3();
 
-            // Render math formulas on load
+            // Handle MathJax rendering safely
             if (window.MathJax) {
-                MathJax.typesetPromise().catch((err) => console.log('MathJax initialization failed: ' + err.message));
+                if (MathJax.typesetPromise) {
+                    MathJax.typesetPromise().catch((err) => console.log('MathJax initialization failed: ' + err.message));
+                } else if (MathJax.startup && MathJax.startup.promise) {
+                    MathJax.startup.promise = MathJax.startup.promise
+                        .then(() => {
+                            return MathJax.typesetPromise();
+                        })
+                        .catch((err) => console.log('MathJax typeset failed: ' + err.message));
+                }
             }
 
-            document.getElementById('submit-btn').addEventListener('click', evaluateQuiz);
+            // Gắn sự kiện click cho nút nộp bài
+            const submitBtn = document.getElementById('submit-btn');
+            if(submitBtn) {
+                submitBtn.addEventListener('click', evaluateQuiz);
+            } else {
+                console.error("Không tìm thấy nút Submit");
+            }
         });
 
         function evaluateQuiz() {
@@ -373,8 +387,8 @@
                 scoreDisplay.classList.remove('animate-bounce');
             }, 2500);
 
-            // Force re-render MathJax in case any formula was hidden
-            if (window.MathJax) {
+            // Safely trigger MathJax re-render for newly visible explanations
+            if (window.MathJax && MathJax.typesetPromise) {
                 MathJax.typesetPromise().catch((err) => console.log('MathJax typeset failed: ' + err.message));
             }
 
